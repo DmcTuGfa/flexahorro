@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finanzas Dashboard</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#171718" />
+  <link rel="icon" href="/icon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="header">
+    <div class="title">
+      <h1 id="appTitle">Finanzas — Dashboard</h1>
+      <div class="subtitle" id="syncSub">Sin conectar</div>
+    </div>
+    <div class="row">
+      <span class="badge" id="syncBadge"><span class="dot warn"></span><span id="syncText">Pendiente</span></span>
+      <button class="btn" id="btnConnect">Conectar Drive</button>
+      <button class="btn" id="btnSync">Sincronizar ahora</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="nav">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="captura">Captura</button>
+      <button class="tab" data-tab="cuentas">Cuentas</button>
+      <button class="tab" data-tab="ajustes">Ajustes</button>
+    </div>
+
+    <div id="view-dashboard">
+      <div class="grid" id="kpiGrid"></div>
+      <div class="two" style="margin-top:10px">
+        <div class="panel">
+          <h2>Distribución del mes (placeholder)</h2>
+          <div class="small">En esta versión base dejamos el donut como placeholder. El cálculo ya está listo; luego lo dibujamos con Canvas/SVG manteniendo tu estilo.</div>
+          <div class="mini" id="donutLegend" style="margin-top:10px"></div>
+        </div>
+        <div class="panel">
+          <h2>Alertas suaves</h2>
+          <div class="mini" id="alertsBox"></div>
+          <h2 style="margin-top:14px">Metas</h2>
+          <div id="goalsBox" class="small"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-captura" style="display:none">
+      <div class="panel">
+        <h2>Captura rápida</h2>
+        <div class="form">
+          <div class="form-row">
+            <div class="field">
+              <label>Fecha</label>
+              <input id="dateInput" type="date"/>
+            </div>
+            <div class="field">
+              <label>Notas (opcional)</label>
+              <input id="notesInput" type="text" placeholder=""/>
+            </div>
+          </div>
+
+          <div class="panel" style="padding:12px">
+            <h2 style="margin-bottom:8px">Ingreso</h2>
+            <div class="form-row">
+              <div class="field">
+                <label>Efectivo</label>
+                <input id="incomeCash" inputmode="decimal" placeholder="0.00"/>
+              </div>
+              <div class="field">
+                <label>Vales (no líquido)</label>
+                <input id="incomeVouchers" inputmode="decimal" placeholder="0.00"/>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" style="padding:12px">
+            <h2 style="margin-bottom:8px">Gastos</h2>
+            <div class="form-row">
+              <div class="field">
+                <label>Viajes</label>
+                <input id="spendTravel" inputmode="decimal" placeholder="0.00"/>
+                <div class="preset">
+                  <button class="pbtn" data-inc="travel" data-amt="-100">−100</button>
+                  <button class="pbtn" data-inc="travel" data-amt="100">+100</button>
+                </div>
+              </div>
+              <div class="field">
+                <label>Otros</label>
+                <input id="spendOther" inputmode="decimal" placeholder="0.00"/>
+                <div class="preset">
+                  <button class="pbtn" data-inc="other" data-amt="100">+100</button>
+                  <button class="pbtn" data-inc="other" data-amt="-100">−100</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label>Compras efectivo</label>
+                <input id="spendShopCash" inputmode="decimal" placeholder="0.00"/>
+                <div class="preset">
+                  <button class="pbtn" data-inc="cash" data-amt="50">+50</button>
+                  <button class="pbtn" data-inc="cash" data-amt="100">+100</button>
+                  <button class="pbtn" data-inc="cash" data-amt="200">+200</button>
+                </div>
+              </div>
+              <div class="field">
+                <label>Compras vales</label>
+                <input id="spendShopVouchers" inputmode="decimal" placeholder="0.00"/>
+                <div class="preset">
+                  <button class="pbtn" data-inc="vouchers" data-amt="50">+50</button>
+                  <button class="pbtn" data-inc="vouchers" data-amt="100">+100</button>
+                  <button class="pbtn" data-inc="vouchers" data-amt="200">+200</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" style="padding:12px">
+            <h2 style="margin-bottom:8px">Fondo flexible (mensual)</h2>
+            <div class="form-row">
+              <div class="field">
+                <label>Monto usado hoy</label>
+                <input id="flexUsed" inputmode="decimal" placeholder="0.00"/>
+                <div class="preset">
+                  <button class="pbtn" data-inc="flex" data-amt="100">+100</button>
+                  <button class="pbtn" data-inc="flex" data-amt="250">+250</button>
+                  <button class="pbtn" data-inc="flex" data-amt="500">+500</button>
+                </div>
+                <div class="small" id="flexRemaining"></div>
+              </div>
+              <div class="field">
+                <label>Acciones</label>
+                <button class="btn primary" id="btnSaveDay" style="width:100%;margin-bottom:8px">Guardar día</button>
+                <button class="btn" id="btnDeleteDay" style="width:100%">Borrar día</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footerbar">
+        <div class="mini">
+          <span class="chip">Neto efectivo hoy: <b id="netCash">0</b></span>
+          <span class="chip">Neto vales hoy: <b id="netVouchers">0</b></span>
+          <span class="chip">Gasto total hoy: <b id="totalSpend">0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-cuentas" style="display:none">
+      <div class="panel">
+        <h2>Cuentas</h2>
+        <div class="small">Esta versión base solo muestra los datos del JSON. Luego añadimos editar/agregar/borrar aquí también.</div>
+        <pre id="accountsDump" style="white-space:pre-wrap;word-break:break-word;color:#B0B3B8"></pre>
+      </div>
+    </div>
+
+    <div id="view-ajustes" style="display:none">
+      <div class="panel">
+        <h2>Ajustes</h2>
+        <div class="small">
+          1) Pega tu CLIENT_ID en <b>public/config.js</b> y vuelve a desplegar.<br/>
+          2) Tu FILE_ID ya está configurado.<br/>
+          3) Usa “Conectar Drive” para autorizar y luego “Sincronizar ahora”.
+        </div>
+        <div style="margin-top:12px" class="field">
+          <label>FILE_ID actual</label>
+          <input id="fileIdInput" />
+        </div>
+        <button class="btn" id="btnSaveConfig" style="margin-top:10px">Guardar FILE_ID</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>
