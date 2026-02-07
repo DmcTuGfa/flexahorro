@@ -9,3 +9,4 @@ window.APP_CONFIG = {
   TIMEZONE: "America/Mexico_City",
   CURRENCY: "MXN"
 };
+
