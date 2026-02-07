@@ -74,9 +74,12 @@ function ensureSkeleton(){
 
 async function driveDownload(fileId){
   if (!accessToken) throw new Error("Sin token");
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, {
-    headers: { "Authorization": "Bearer " + accessToken }
-  });
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
+    {
+      headers: { "Authorization": "Bearer " + accessToken }
+    }
+  );
   if (!res.ok) throw new Error("No pude descargar de Drive ("+res.status+")");
   const text = await res.text();
   const etag = res.headers.get("etag");
