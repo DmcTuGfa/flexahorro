@@ -76,9 +76,7 @@ async function driveDownload(fileId){
   if (!accessToken) throw new Error("Sin token");
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
-    {
-      headers: { "Authorization": "Bearer " + accessToken }
-    }
+    { headers: { "Authorization": "Bearer " + accessToken } }
   );
   if (!res.ok) throw new Error("No pude descargar de Drive ("+res.status+")");
   const text = await res.text();
@@ -88,14 +86,17 @@ async function driveDownload(fileId){
 
 async function driveUpload(fileId, jsonText){
   if (!accessToken) throw new Error("Sin token");
-  const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileId)}?uploadType=media`, {
-    method: "PATCH",
-    headers: {
-      "Authorization": "Bearer " + accessToken,
-      "Content-Type": "application/json; charset=utf-8"
-    },
-    body: jsonText
-  });
+  const res = await fetch(
+    `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileId)}?uploadType=media`,
+    {
+      method: "PATCH",
+      headers: {
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json; charset=utf-8"
+      },
+      body: jsonText
+    }
+  );
   if (!res.ok) throw new Error("No pude subir a Drive ("+res.status+")");
   const etag = res.headers.get("etag");
   return { etag };
@@ -121,6 +122,7 @@ function mergeByDate(local, remote){
   }
   out.ledger = out.ledger || {};
   out.ledger.days = Array.from(map.values()).sort((a,b) => (a.date||"").localeCompare(b.date||""));
+
   // meta.updated_at
   const lu = Date.parse(local?.meta?.updated_at || "1970-01-01T00:00:00Z");
   const ru = Date.parse(remote?.meta?.updated_at || "1970-01-01T00:00:00Z");
@@ -178,9 +180,8 @@ function calcMonth(data, ym){
 
 function softAlerts(data, m){
   const chips = [];
-  // Flex used
   if (m.flexUsed > 0) chips.push({t:"Fondo flexible usado", level:"warn"});
-  // Missing updates days
+
   const days = (data?.ledger?.days || []);
   if (days.length){
     const last = days.map(d=>d.date).sort().slice(-1)[0];
@@ -188,7 +189,6 @@ function softAlerts(data, m){
     const diff = Math.floor((Date.now() - lastD.getTime()) / (1000*60*60*24));
     if (diff >= 3) chips.push({t:`${diff} días sin actualizar`, level:"warn"});
   }
-  // Spend over simple plan (weekly rough) - skip here for base
   return chips;
 }
 
@@ -241,7 +241,6 @@ function renderDashboard(data){
     grid.appendChild(div);
   }
 
-  // Donut legend placeholder values
   const legend = [
     {name:"Gastos efectivo", val: m.spendCash},
     {name:"Gastos vales", val: m.spendVouchers},
@@ -275,7 +274,6 @@ function renderDashboard(data){
   document.getElementById("goalsBox").textContent = goalSummary(data, m);
 
   document.getElementById("accountsDump").textContent = JSON.stringify(data.accounts, null, 2);
-  // Sync status text
   const ds = loadDriveSettings();
   const last = ds.lastSyncAt ? new Date(ds.lastSyncAt).toLocaleString('es-MX') : "—";
   document.getElementById("syncSub").textContent = isConnected ? `Última sync: ${last}` : "Sin conectar";
@@ -347,7 +345,6 @@ function updateFlexRemaining(){
   const days = (data?.ledger?.days || []).filter(d => monthKey(d.date) === ym);
   const flexUsedMonth = days.reduce((a,d)=>a+parseNum(d.flex_fund_used),0);
 
-  // If editing today's day, include current flex input instead of stored
   const flexToday = parseNum(document.getElementById("flexUsed").value);
   const dateStr = document.getElementById("dateInput").value;
   const todayStored = days.find(d => d.date === dateStr);
@@ -368,19 +365,15 @@ async function syncNow(){
 
   setSyncBadge("warn", "Sincronizando…");
 
-  // Load local
   let local = loadLocal();
   if (!local) local = ensureSkeleton();
 
-  // Download remote
   const { text } = await driveDownload(fileId);
   let remote = null;
   try{ remote = JSON.parse(text); } catch(e){ throw new Error("El archivo de Drive no es JSON válido"); }
 
-  // Merge
   const merged = mergeByDate(local, remote);
 
-  // Save local and upload merged (idempotent)
   saveLocal(merged);
   merged.meta.updated_at = nowIso();
   const jsonText = JSON.stringify(merged, null, 2);
@@ -401,7 +394,12 @@ function initGoogle(){
   }
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: window.APP_CONFIG.CLIENT_ID,
-    scope: "https://www.googleapis.com/auth/drive.file",
+
+    // ✅ CAMBIO IMPORTANTE:
+    // drive.file NO puede leer tu archivo existente por fileId.
+    // drive SÍ permite leer/escribir tu finanzas.json existente.
+    scope: "https://www.googleapis.com/auth/drive",
+
     callback: (resp) => {
       if (resp && resp.access_token){
         accessToken = resp.access_token;
@@ -433,7 +431,6 @@ function bindUI(){
     try{ await syncNow(); } catch(e){ setSyncBadge("bad", e.message); alert(e.message); }
   });
 
-  // Ajustes: fileId override
   const ds = loadDriveSettings();
   document.getElementById("fileIdInput").value = ds.fileId || window.APP_CONFIG.FILE_ID || "";
   document.getElementById("btnSaveConfig").addEventListener("click", () => {
@@ -444,12 +441,10 @@ function bindUI(){
     alert("FILE_ID guardado en este dispositivo.");
   });
 
-  // Capture date default today
   const d = new Date();
   const iso = d.toISOString().slice(0,10);
   document.getElementById("dateInput").value = iso;
 
-  // Load or create local
   let data = loadLocal();
   if (!data){
     data = ensureSkeleton();
@@ -457,11 +452,9 @@ function bindUI(){
   }
   renderDashboard(data);
 
-  // Load day into capture
   const day = getOrCreateDay(data, iso);
   fillCaptureFromDay(day);
 
-  // Live update on inputs
   ["incomeCash","incomeVouchers","spendTravel","spendOther","spendShopCash","spendShopVouchers","flexUsed"].forEach(id=>{
     document.getElementById(id).addEventListener("input", ()=>{
       updateLiveSummary();
@@ -469,7 +462,6 @@ function bindUI(){
     });
   });
 
-  // Presets
   document.querySelectorAll(".pbtn").forEach(b=>{
     b.addEventListener("click", ()=>{
       const inc = b.dataset.inc;
@@ -491,7 +483,6 @@ function bindUI(){
     });
   });
 
-  // Save day
   document.getElementById("btnSaveDay").addEventListener("click", ()=>{
     const data = loadLocal() || ensureSkeleton();
     const dateStr = document.getElementById("dateInput").value;
@@ -515,7 +506,6 @@ function bindUI(){
     alert("Guardado.");
   });
 
-  // Delete day
   document.getElementById("btnDeleteDay").addEventListener("click", ()=>{
     const dateStr = document.getElementById("dateInput").value;
     if (!confirm("¿Borrar este día? Esto afectará reportes.")) return;
